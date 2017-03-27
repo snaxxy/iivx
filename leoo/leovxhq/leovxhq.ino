@@ -27,19 +27,23 @@ uint8_t lightMode = 1;
 uint8_t ledPins[] = {6,7,8,9,10,11,12};
 uint8_t buttonPins[] = {13,18,19,20,21,22,23};
 uint8_t sysPin = 5;
+uint8_t reactiveLightPin = 21;
+uint8_t hidLightPin = 22;
+uint8_t sysInputPins[] = {13,18,19,20};
 int32_t encL=0, encR=0;
 /* current pin layout
- *  pins 1 to 9 = LED 1 to 9
+ *  pins 6 to 12 = LED 1 to 7
  *    connect pin to + termnial of LED
  *    connect ground to resistor and then - terminal of LED
- *  pins 11 to 13, A0 to A5 = Button input 1 to 9
+ *  pins 13, A0 to A5 = Button input 1 to 7
  *    connect button pin to ground to trigger button press
- *  pins 0 = system pin
- *    connect system pin to ground 
- *      together with other buttons to change lighting scheme
+ *  pins 5 = system pin
+ *    connect system pin to ground with a small button
+ *      press together with other buttons to change lighting scheme
  *    system button + button 1 = reactive lighting
  *    system button + button 3 = HID lighting
  */
+ 
 
 void doEncL(){
   if((ENCODER_PORT >> ENC_L_B_ADDR)&1){
@@ -102,16 +106,20 @@ void loop() {
   } else {
     lights(iivx_led);
   }
-  // Detect lighting changes
+  // Detect Syspin Entries
   if(digitalRead(sysPin)!=HIGH){
-    if(report.buttons == 1){
+    report.buttons = 0;
+    for(int i=0;i<4;i++){
+      if(digitalRead(sysInputPins[i])!=HIGH){
+        report.buttons |= (uint16_t)1 << (i+buttonCount);
+      } else {
+        report.buttons &= ~((uint16_t)1 << (i+buttonCount));
+      }
+    }
+    if(digitalRead(reactiveLightPin)!=HIGH){
       lightMode = 0;
-    } else if (report.buttons == 4){
+    } else if (digitalRead(hidLightPin)!=HIGH){
       lightMode = 1;
-    } else if (report.buttons == 16){
-      report.buttons = (uint16_t)1 << (buttonCount);
-    } else if (report.buttons == 64){
-      report.buttons = (uint16_t)1 << (buttonCount+1);
     }
   }
   // Send report and delay
